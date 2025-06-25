@@ -31,6 +31,7 @@ def db_create_person(name : str, age : int,
             INSERT INTO people (name, age, blood_group, gender, img_path)
             VALUES(?, ?, ?, ?, ?);
         """, (name, age, blood_group, gender, img_path))
+    return None
 
 # Get all the people
 def db_get_people() -> list:
@@ -41,8 +42,15 @@ def db_get_people() -> list:
         stuff = cursor.fetchall()
     return stuff
 
-
-
+def db_delete_person(
+    name : str, age : int,
+    blood_group : str, gender : str
+    ) -> None:
+    with sqlite3.connect("people.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM people WHERE name = ? AND age = ? AND blood_group = ? AND gender = ?",(name, age, blood_group, gender, img_path) )
+        conn.commit()
+    return None
 
 
 
@@ -79,6 +87,27 @@ def upload_image():
     db_create_person(name, age, blood_group, gender, file_path)
 
     return jsonify({'message': 'Image uploaded successfully', 'filename': filename}), 200
+
+@app.route('/getall')
+def getall():
+    values = db_get_people()
+    values = [{
+        'name' : i[0],
+        'age' : i[1],
+        'bloodGroup' : i[2],
+        'gender' : i[3],
+        'img_path' : i[4]
+        } for i in values]
+    return jsonify(values)
+
+@app.route('/delete')
+def delete_records():
+    name = request.form.get('name')
+    age = request.form.get('age')
+    gender = request.form.get('gender')
+    blood_group = request.form.get('blood_group')
+    db_delete_person(name, age, blood_group, gender)
+
 
 
 @app.route('/test')
