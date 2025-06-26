@@ -87,13 +87,29 @@ def get_modeldetails():
 # Run the model on a record and return the value
 @app.route('/run_model', methods=['POST'])
 def run_model():
-    # This is just specific to the predict img model
-    id = request.form.get('id')
-    data = list(db_get_person(id)[0])[5]
-    output = predict_img(data, available_models["SickleCell"])
-    return output
+    try:
+        id = request.form.get('id')
+        if not id:
+            return jsonify({"error": "Patient ID is required"}), 400
 
+        record = db_get_person(id)
+        if not record:
+            return jsonify({"error": "Patient not found"}), 404
 
+        image_path = record[0][5]  # Assuming img_path is at index 5
+        
+        # Handle null/empty paths
+        if not image_path or str(image_path).lower() == "null":
+            return jsonify({"error": "No image associated with this patient"}), 400
+
+        if not os.path.exists(image_path):
+            return jsonify({"error": f"Image file not found at: {image_path}"}), 400
+
+        output = predict_img(image_path, available_models["SickleCell"])
+        return jsonify({"prediction": output})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # Testing Routes
@@ -109,5 +125,4 @@ def test1():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
-
+    app.run(host='0.0.0.0', port=5001, debug=True)
