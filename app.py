@@ -2,58 +2,9 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
-import sqlite3
-
-# Database stuff
-
-# Create table
-with sqlite3.connect("people.db") as conn:
-    cursor = conn.cursor()
-    cursor.execute("""
-       CREATE TABLE IF NOT EXISTS people (
-           id INTEGER PRIMARY KEY AUTOINCREMENT,
-           name TEXT NOT NULL,
-           age INTEGER NOT NULL,
-           blood_group TEXT NOT NULL,
-           gender TEXT NOT NULL,
-           img_path TEXT NOT NULL
-       );
-    """)
-# Functions to do stuff with the table
-
-# Create a new person record
-def db_create_person(name : str, age : int,
-                  blood_group : str, gender : str,
-                  img_path : str) -> None:
-    with sqlite3.connect("people.db") as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO people (name, age, blood_group, gender, img_path)
-            VALUES(?, ?, ?, ?, ?);
-        """, (name, age, blood_group, gender, img_path))
-    return None
-
-# Get all the people
-def db_get_people() -> list:
-    stuff = []
-    with sqlite3.connect("people.db") as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT name, age, blood_group, gender, img_path FROM PEOPLE;")
-        stuff = cursor.fetchall()
-    return stuff
-
-def db_delete_person(
-    name : str, age : int,
-    blood_group : str, gender : str
-    ) -> None:
-    with sqlite3.connect("people.db") as conn:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM people WHERE name = ? AND age = ? AND blood_group = ? AND gender = ?",(name, age, blood_group, gender, img_path) )
-        conn.commit()
-    return None
-
-
-
+from database_ops import *
+from ml_ops import *
+import uuid
 
 
 
@@ -65,6 +16,8 @@ UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+
+# Create a new person in the table and upload an associated image with it
 @app.route('/upload', methods=['POST'])
 def upload_image():
     if 'image' not in request.files:
@@ -80,7 +33,7 @@ def upload_image():
     gender = request.form.get('gender')
     blood_group = request.form.get('blood_group')
 
-    filename = secure_filename(file.filename)
+    filename =  uuid.uuid4().hex + secure_filename(file.filename) 
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(file_path)
 
@@ -88,19 +41,34 @@ def upload_image():
 
     return jsonify({'message': 'Image uploaded successfully', 'filename': filename}), 200
 
+
+# Return a json object with all the values in the table
+# Use this to implement the table in the dashboard
 @app.route('/getall')
 def getall():
     values = db_get_people()
     values = [{
-        'name' : i[0],
-        'age' : i[1],
-        'bloodGroup' : i[2],
-        'gender' : i[3],
-        'img_path' : i[4]
+        'id' : i[0],
+        'name' : i[1],
+        'age' : i[2],
+        'bloodGroup' : i[3],
+        'gender' : i[4],
+        'img_path' : i[5]
         } for i in values]
     return jsonify(values)
 
-@app.route('/delete')
+# Get a single person based on ID
+@app.route('/getone', methods=['POST'])
+def getone():
+    id = request.form.get('id')
+    # return predict_img(db_get_person(2)[0][], model)
+    data = list(db_get_person(id)[0])
+    
+    data = {"id" : data[0], "name" : data[1], "age" : data[2], "blood_group" : data[3], "gender" : data[4]}
+    return jsonify(data)
+
+# Delete a record in the table based on name, age, etc
+@app.route('/delete', methods=['POST'])
 def delete_records():
     name = request.form.get('name')
     age = request.form.get('age')
@@ -108,8 +76,18 @@ def delete_records():
     blood_group = request.form.get('blood_group')
     db_delete_person(name, age, blood_group, gender)
 
+# Machine Learning Routes
+
+# Return a list of available models and details
+@app.route('/model_details')
+def get_modeldetails():
+    return jsonify(available_models)
+
+# Run the model on a record and return the value
 
 
+
+# Testing Routes
 @app.route('/test')
 def testshit():
     db_create_person("John Doe", 24, "O+", "Male", "Null")
