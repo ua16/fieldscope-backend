@@ -6,6 +6,7 @@ from database_ops import *
 from ml_ops import *
 import uuid
 
+available_models = load_new_model(available_models, "SickleCell")
 
 
 app = Flask(__name__)
@@ -64,7 +65,7 @@ def getone():
     # return predict_img(db_get_person(2)[0][], model)
     data = list(db_get_person(id)[0])
     
-    data = {"id" : data[0], "name" : data[1], "age" : data[2], "blood_group" : data[3], "gender" : data[4]}
+    data = {"id" : data[0], "name" : data[1], "age" : data[2], "blood_group" : data[3], "gender" : data[4], "img_path" : data[5]}
     return jsonify(data)
 
 # Delete a record in the table based on name, age, etc
@@ -84,6 +85,14 @@ def get_modeldetails():
     return jsonify(available_models)
 
 # Run the model on a record and return the value
+@app.route('/run_model', methods=['POST'])
+def run_model():
+    # This is just specific to the predict img model
+    id = request.form.get('id')
+    data = list(db_get_person(id)[0])[5]
+    output = predict_img(data, available_models["SickleCell"])
+    return output
+
 
 
 

@@ -6,9 +6,9 @@ def predict_img(image, model):
     test_img=cv2.imread(image)
     test_img=cv2.resize(test_img,(224,224))
     test_img=np.expand_dims(test_img,axis=0)
-    result = model.predict(test_img)
+    result = model["model"].predict(test_img)
     r=np.argmax(result)
-    return class_names[r]
+    return model["class_names"][r]
 
 
 function_mappings = {
